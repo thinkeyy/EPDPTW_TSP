@@ -120,4 +120,36 @@ public class clentint {
 
 		return clientCostValue;
 	}
+	
+	/*距离充电桩的距离
+	 * homeCostValue[0][i] 充电桩到上车点的距离
+	 * homeCostValue[1][i] 充电桩到下车点的距离
+	 */
+	public int[][] getHomeCostValue(int[][] clientstart, int[][] clientdone, int x, int y) {
+		int [][] homeCostValue = new int[2][clent_num];
+		for(int i = 0; i < 2; i++){
+			for(int j = 0; j < clent_num; j++){
+				if(i == 0){
+					double temp = Math.pow((Math.pow((clientstart[j][0] - x), 2)
+							+ Math.pow((clientstart[j][1] - y), 2)), 0.5);
+					int inttemp = (int) Math.round(temp);
+					if (inttemp < temp) {// 四舍五入
+						homeCostValue[i][j] = inttemp + 1;
+					} else {
+						homeCostValue[i][j] = inttemp;
+					}
+				}else if (i == 1) {
+					double temp = Math.pow((Math.pow((clientdone[j][0] - x), 2)
+							+ Math.pow((clientdone[j][1] - y), 2)), 0.5);
+					int inttemp = (int) Math.round(temp);
+					if (inttemp < temp) {// 四舍五入
+						homeCostValue[i][j] = inttemp + 1;
+					} else {
+						homeCostValue[i][j] = inttemp;
+					}
+				}
+			}
+		}
+		return homeCostValue;
+	}
 }
