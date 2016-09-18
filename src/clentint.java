@@ -56,6 +56,7 @@ public class clentint {
 			strbuff = data.readLine();
 			// ×Ö·û·Ö¸î
 			String[] strcol = strbuff.split(" ");
+			//System.out.println(strcol[2]);
 			clientstart[i][0] = Integer.valueOf(strcol[n]);
 			clientstart[i][1] = Integer.valueOf(strcol[m]);
 		}
@@ -116,7 +117,8 @@ public class clentint {
 				// System.out.println("dist_list["+i+"]["+j+"]"+clientCostValue[i][j]);
 			}
 		}
-		clientCostValue[clientstart[0].length - 1][clientstart[0].length - 1] = 0;
+
+		clientCostValue[clent_num-1][clent_num-1] = 0;
 
 		return clientCostValue;
 	}
