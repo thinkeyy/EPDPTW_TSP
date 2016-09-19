@@ -22,8 +22,9 @@ public class pso {
 	private int gbest_g; //当前全局最优解粒子
 	private double[] gbest_s; //当前全局最优解粒子位置
 	private int[] pbest_s; //局域最优解
-	private int[] evaluate_array; //粒子评价值数组
-
+	private double[] evaluate_array; //粒子评价值数组
+	private double[] a; //粒子评价值数组
+	private double[] b; //粒子评价值数组
 	
 	private int[][] clientCostValue;//客户间距离
 	private int[][] HomeCostValue;//客户到充电点距离
@@ -33,7 +34,7 @@ public class pso {
 	private Map<Integer, List<Integer>> clent_p; //客户邻域
 	
 	private Random random ;
-	private int x, y;//充电桩
+	private int x = 25, y = 25;//充电桩
 	
 	private int basic_distance;
 	
@@ -71,6 +72,20 @@ public class pso {
 			//System.out.println(i);
 		}
 	}
+	
+	public double getSatisfaction (double a,double b,int cometime){
+		double satisfaction = 0;
+		if(cometime >= a && cometime< a+30){
+			satisfaction = Math.sqrt((cometime - a)/30);
+		}else if(cometime >= a+30 && cometime <= b-30){
+			satisfaction = 1;
+		}else if (cometime > b-30 && cometime <= b) {
+			satisfaction = Math.sqrt((b - cometime)/30);
+		}else {
+			satisfaction = 0;
+		}
+		return satisfaction;
+	}
 
 	/*
 	 * int[] clientBasicValue 客户上车点和下车点距离
@@ -78,8 +93,8 @@ public class pso {
 	 * double[][] grain_p 粒子位子矩阵
 	 */
 
-	private void getEvaluateList(int[][] clientCostValue,int[] clientBasicValue, int[][] HomeCostValue, double[][] grain_p) {
-	evaluate_array = new int[grain_num];
+	private void getEvaluateList(int[][] clientCostValue,int[] clientBasicValue, int[][] HomeCostValue, double[][] grain_p, double[] a, double[] b) {
+	evaluate_array = new double[grain_num];
 	for (int i = 0; i < grain_num; i++){
 		double[] grainPosition_i = new double[clent_num];
 		
@@ -98,31 +113,42 @@ public class pso {
 		
 		//求解粒子i的评价值
 		evaluate_array[i] = 0;
+		int evaluatetotal = 0;
+		double satisfactiontotal = 0;
 		for (int j = 0; j < car_num; j++) {
 			int evaluate = 0;
+			double satisfaction = 0;
 			List<Integer> carClentList = new ArrayList<>();
 			for (int j2 = 0; j2 < grainPosition_i.length; j2++) {
 				if(grainPosition_i[j2] == j){
 					carClentList.add(j2);//将客户分配给车辆
 				}
 			}
+			if (carClentList.size() != 0) {
+				evaluate = evaluate + HomeCostValue[0][carClentList.get(0)] + clientBasicValue[carClentList.get(0)];
+				satisfaction = satisfaction + getSatisfaction(a[carClentList.get(0)], b[carClentList.get(0)], evaluate-clientBasicValue[carClentList.get(0)]);
+			}
 			if (carClentList.size() > 1) {
 				for (int j3 = 0 ; j3 < carClentList.size()-1; j3++) {
 					if((evaluate + clientBasicValue[carClentList.get(j3+1)] + clientCostValue[carClentList.get(j3)][carClentList.get(j3+1)]+HomeCostValue[1][carClentList.get(j3+1)]) > 200){
 						evaluate = evaluate + HomeCostValue[1][carClentList.get(j3)] + HomeCostValue[0][carClentList.get(j3+1)] + clientBasicValue[carClentList.get(j3+1)];
+						satisfaction = satisfaction + getSatisfaction(a[j3+1], b[j3+1], evaluate-clientBasicValue[carClentList.get(j3+1)]);
 					}else {
 						evaluate = evaluate + clientCostValue[carClentList.get(j3)][carClentList.get(j3+1)] + clientBasicValue[carClentList.get(j3+1)];
+						satisfaction = satisfaction + getSatisfaction(a[j3+1], b[j3+1], evaluate-clientBasicValue[carClentList.get(j3+1)]);
 					}
 				}
 			}
 			if (carClentList.size() != 0) {
-				evaluate = evaluate + HomeCostValue[0][carClentList.get(0)] + clientBasicValue[carClentList.get(0)];
 				evaluate = evaluate + HomeCostValue[1][carClentList.get(carClentList.size()-1)];
+				
 			}
 			
-			evaluate_array[i] = evaluate_array[i]+evaluate;
+			evaluatetotal = evaluatetotal + evaluate;
+			satisfactiontotal = satisfactiontotal + satisfaction;	
 		}
-		
+		//System.out.println(i+ "\t" + satisfactiontotal/clent_num);
+		evaluate_array[i] = 0.3 * (evaluatetotal -basic_distance) + 0.7 * 5500 * (1-satisfactiontotal/clent_num);
 	}
 }
 	
@@ -163,14 +189,14 @@ public class pso {
 	 * evaluate_array : 粒子的评价值
 	 * clent_p： 粒子的邻域
 	 */
-	public void getPbest_s(int[] evaluate_array ,Map<Integer, List<Integer>> clent_p,double [][] grain_p) {
+	public void getPbest_s(double[] evaluate_array ,Map<Integer, List<Integer>> clent_p,double [][] grain_p) {
 		pbest_s = new int[grain_num];
 		for (int i = 0; i < grain_num; i++) {
 			if(clent_p.get(i).size() == clent_num){
 				pbest_s[i] = gbest_g;
 			}else {
 				int best_p = clent_p.get(i).get(0);
-				int temp = evaluate_array[clent_p.get(i).get(0)];
+				double temp = evaluate_array[clent_p.get(i).get(0)];
 				for(int j = 1; j < clent_p.get(i).size(); j++) {
 					if(evaluate_array[clent_p.get(i).get(j)] <= temp) {
 						best_p = clent_p.get(i).get(j);
@@ -186,9 +212,9 @@ public class pso {
 	 *evaluate_array : 粒子的评价值
 	 *int[][] grain_p : 粒子位子矩阵
 	 */
-	public void getGbest_s(int[] evaluate_array, double [][] grain_p) {
+	public void getGbest_s(double[] evaluate_array, double [][] grain_p) {
 		int best_g = 0;
-		int temp = evaluate_array[0];
+		double temp = evaluate_array[0];
 		for (int i = 1; i < evaluate_array.length; i++) {
 			if(evaluate_array[i] <= temp) {
 				best_g = i;
@@ -245,6 +271,8 @@ public class pso {
 		clentint clentinit = new clentint(clent_num);
 		int[][] clientstart = clentinit.getClientStart("src/data.txt", 1, 2);
 		int[][] clientdone = clentinit.getClientStart("src/data.txt", 3, 4);
+		a = clentinit.getTime("src/data2.txt", 1);
+		b = clentinit.getTime("src/data2.txt", 2);
 		System.out.println("clent_num="+clent_num);
 		clientCostValue = clentinit.getClientCostValue(clientstart, clientdone);
 		HomeCostValue = clentinit.getHomeCostValue(clientstart, clientdone, x, y);
@@ -257,14 +285,14 @@ public class pso {
 	}
 	public void solve() throws IOException {
 		clentInit();
-		int Gbest = 99999;
+		double Gbest = 99999;
 		double[] Gbest_a = new double[clent_num]; 
 		double[][] history_p = null;
 		
-		int[] history_e = null;//粒子历史最优解
+		double[] history_e = null;//粒子历史最优解
 		
 		for(int t = 0; t < 1000; t++) {
-			getEvaluateList(clientCostValue,clientBasicValue, HomeCostValue, grain_p);
+			getEvaluateList(clientCostValue,clientBasicValue, HomeCostValue, grain_p, a, b);
 			
 
 			if(history_e == null || history_e.length == 0){
@@ -298,25 +326,29 @@ public class pso {
 	
 			getPbest_s(evaluate_array, clent_p, grain_p);//获取领域最优解
 			//System.out.print("t="+t+"时最优解评价值为"+Gbest+"粒子位子");
-//			System.out.print((Gbest-basic_distance)+",");
+			System.out.print(Gbest+",");
 //			System.out.println(gbest_g+"\t" + evaluate_array[gbest_g]);
 //			for(int i = 0; i < evaluate_array.length; i++){
 //				System.out.print(evaluate_array[i]+"\t");
 //			}
-			System.out.println("qqqqqq");
 			
-			for(int i = 0; i < Gbest_a.length; i++){
-				if(Gbest_a[i]<0){
-					System.out.print(0+"\t");
-				}else if(Gbest_a[i]>car_num){
-					System.out.print(car_num-1+"\t");
-				}else {
-					System.out.print(Math.floor(Gbest_a[i])+"\t");
-				}
-				
-			}
-			System.out.println();
 			getStatusT(grain_v, grain_p, pbest_s, Gbest_a, history_p);
+		}
+		
+		System.out.println();
+		for(int c =0 ;c<car_num;c++){
+			System.out.print(c+":\t");
+		for(int i = 0; i < Gbest_a.length; i++){
+			if(Gbest_a[i]<0&& c==0 ){
+				System.out.print(i+"\t");
+			}else if(Gbest_a[i]>car_num & c == car_num-1){
+				System.out.print(i+"\t");
+			}else if(Math.floor(Gbest_a[i]) == c){
+				System.out.print(i+"\t");
+			}
+			
+		}
+		System.out.println();
 		}
 	}
 	/**

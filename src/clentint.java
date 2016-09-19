@@ -4,6 +4,7 @@ import java.io.FileInputStream;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.util.Random;
 
 public class clentint {
 	int clent_num;
@@ -63,6 +64,23 @@ public class clentint {
 		return clientstart;
 	}
 	
+	// 读取上车、下次数据
+		public double[] getTime(String filePath, int n) throws IOException {
+			double[] time = new double[clent_num];
+			String strbuff;
+			@SuppressWarnings("resource")
+			BufferedReader data = new BufferedReader(new InputStreamReader(new FileInputStream(filePath)));
+			for (int i = 0; i < clent_num; i++) {
+				// 读取一行数据，数据格式1 6734 1453
+				strbuff = data.readLine();
+				// 字符分割
+				String[] strcol = strbuff.split(" ");
+				//System.out.println(strcol[2]);
+				time[i] = Double.valueOf(strcol[n]);
+				
+			}
+			return time;
+		}
 	// 获取客户起点到终点的距离
 	public int[] getClientBasicValue(int[][] clientstart, int[][] clientdone) {
 		int[] clientBasicValue = new int[clent_num];
@@ -154,4 +172,26 @@ public class clentint {
 		}
 		return homeCostValue;
 	}
+	
+	public String creatTime(int[] clientBasicValue,int[][] homeCostValue){
+		String time = "";
+		Random random = new Random();
+		for(int i = 0; i < clent_num; i++){
+			double r1 = 1 - random.nextDouble()*2;
+			double a0 = homeCostValue[0][i] + r1 * 10;
+			double b0 = homeCostValue[0][i] + clientBasicValue[i] + 300*random.nextDouble() + 30;
+			time = time+ " " + a0 + " " + b0 + "\r\n";
+		}
+		return time;
+	}
+	
+//	public static void main(String[] args) throws IOException {
+//		clentint clentinit = new clentint(200);
+//		int[][] clientstart = clentinit.getClientStart("src/data.txt", 1, 2);
+//		int[][] clientdone = clentinit.getClientStart("src/data.txt", 3, 4);
+//		int[][] homeCostValue = clentinit.getHomeCostValue(clientstart, clientdone, 25, 25);
+//		int[] clientBasicValue = clentinit.getClientBasicValue(clientstart, clientdone);
+//		String time = clentinit.creatTime(clientBasicValue, homeCostValue);
+//		clentinit.WriteStringToFile("src/data2.txt", time);
+//	}
 }
