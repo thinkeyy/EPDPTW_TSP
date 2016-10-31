@@ -75,12 +75,12 @@ public class pso {
 	
 	public double getSatisfaction (double a,double b,int cometime){
 		double satisfaction = 0;
-		if(cometime >= a && cometime< a+30){
-			satisfaction = Math.sqrt((cometime - a)/30);
-		}else if(cometime >= a+30 && cometime <= b-30){
+		if(cometime >= a-80 && cometime< a){
+			satisfaction = Math.sqrt((cometime - a + 80)/80);
+		}else if(cometime >= a && cometime <= b){
 			satisfaction = 1;
-		}else if (cometime > b-30 && cometime <= b) {
-			satisfaction = Math.sqrt((b - cometime)/30);
+		}else if (cometime > b && cometime <= b+80) {
+			satisfaction = Math.sqrt((b+80 - cometime)/80);
 		}else {
 			satisfaction = 0;
 		}
@@ -130,7 +130,7 @@ public class pso {
 			}
 			if (carClentList.size() > 1) {
 				for (int j3 = 0 ; j3 < carClentList.size()-1; j3++) {
-					if((evaluate + clientBasicValue[carClentList.get(j3+1)] + clientCostValue[carClentList.get(j3)][carClentList.get(j3+1)]+HomeCostValue[1][carClentList.get(j3+1)]) > 200){
+					if((evaluate + clientBasicValue[carClentList.get(j3+1)] + clientCostValue[carClentList.get(j3)][carClentList.get(j3+1)]+HomeCostValue[1][carClentList.get(j3+1)]) > 300){
 						evaluate = evaluate + HomeCostValue[1][carClentList.get(j3)] + HomeCostValue[0][carClentList.get(j3+1)] + clientBasicValue[carClentList.get(j3+1)];
 						satisfaction = satisfaction + getSatisfaction(a[j3+1], b[j3+1], evaluate-clientBasicValue[carClentList.get(j3+1)]);
 					}else {
@@ -151,7 +151,63 @@ public class pso {
 		evaluate_array[i] = 0.3 * (evaluatetotal -basic_distance) + 0.7 * 5500 * (1-satisfactiontotal/clent_num);
 	}
 }
+	//获取无效距离
+	private void getUnseDistance(int[][] clientCostValue,int[] clientBasicValue, int[][] HomeCostValue, double[] Gbest_a, double[] a, double[] b) {
 	
+		double[] grainPosition_i = new double[clent_num];
+		
+		//向下取整
+		for (int j = 0; j < clent_num; j++){
+			if(Gbest_a[j] < 0){
+				grainPosition_i[j] = 0;
+			}else if(Gbest_a[j] > car_num){
+				grainPosition_i[j] = car_num -1;
+			}else {
+				grainPosition_i[j] = Math.floor(Gbest_a[j]);
+			}
+			
+			
+		}
+		
+		//求解粒子i的评价值
+		int evaluatetotal = 0;
+		double satisfactiontotal = 0;
+		for (int j = 0; j < car_num; j++) {
+			int evaluate = 0;
+			double satisfaction = 0;
+			List<Integer> carClentList = new ArrayList<>();
+			for (int j2 = 0; j2 < grainPosition_i.length; j2++) {
+				if(grainPosition_i[j2] == j){
+					carClentList.add(j2);//将客户分配给车辆
+				}
+			}
+			if (carClentList.size() != 0) {
+				evaluate = evaluate + HomeCostValue[0][carClentList.get(0)] + clientBasicValue[carClentList.get(0)];
+				satisfaction = satisfaction + getSatisfaction(a[carClentList.get(0)], b[carClentList.get(0)], evaluate-clientBasicValue[carClentList.get(0)]);
+			}
+			if (carClentList.size() > 1) {
+				for (int j3 = 0 ; j3 < carClentList.size()-1; j3++) {
+					if((evaluate + clientBasicValue[carClentList.get(j3+1)] + clientCostValue[carClentList.get(j3)][carClentList.get(j3+1)]+HomeCostValue[1][carClentList.get(j3+1)]) > 300){
+						evaluate = evaluate + HomeCostValue[1][carClentList.get(j3)] + HomeCostValue[0][carClentList.get(j3+1)] + clientBasicValue[carClentList.get(j3+1)];
+						satisfaction = satisfaction + getSatisfaction(a[j3+1], b[j3+1], evaluate-clientBasicValue[carClentList.get(j3+1)]);
+					}else {
+						evaluate = evaluate + clientCostValue[carClentList.get(j3)][carClentList.get(j3+1)] + clientBasicValue[carClentList.get(j3+1)];
+						satisfaction = satisfaction + getSatisfaction(a[j3+1], b[j3+1], evaluate-clientBasicValue[carClentList.get(j3+1)]);
+					}
+				}
+			}
+			if (carClentList.size() != 0) {
+				evaluate = evaluate + HomeCostValue[1][carClentList.get(carClentList.size()-1)];
+				
+			}
+			
+			evaluatetotal = evaluatetotal + evaluate;
+			
+			satisfactiontotal = satisfactiontotal + satisfaction;	
+		}
+		System.out.println("无效距离："+(evaluatetotal-4096));
+		System.out.println("满意度："+satisfactiontotal/200);
+}
 	/*获取时间t时的粒子速度、粒子位置
 	 * history_p 粒子最优解
 	 * gbest_s 全局最优解
@@ -224,7 +280,7 @@ public class pso {
 		gbest_g = best_g;
 		gbest_s = grain_p[best_g].clone();
 	}
-	
+	  
 	//获取客户的邻域
 	private Map<Integer, List<Integer>> getClent_p(int[] clent_array, int t) {
 		
@@ -350,6 +406,8 @@ public class pso {
 		}
 		System.out.println();
 		}
+		
+		getUnseDistance(clientCostValue,clientBasicValue, HomeCostValue, Gbest_a, a, b);
 	}
 	/**
 	 * @param args
